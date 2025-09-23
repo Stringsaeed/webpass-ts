@@ -1,16 +1,62 @@
-import { Link } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { ThemedView } from "@/components/themed-view";
+import { UAEPassWebView } from "@/components/UAEPassWebview";
+import { UAEPassConfiguration, UAEPassServiceType } from "@/utils/uaepass";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { Linking, StyleSheet } from "react-native";
+import { WebViewProps } from "react-native-webview";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+const INJECTEDJAVASCRIPT = `const meta = document.createElement('meta'); meta.setAttribute('content', 'width=device-width, initial-scale=0.5, maximum-scale=0.5, user-scalable=0'); meta.setAttribute('name', 'viewport'); document.getElementsByTagName('head')[0].appendChild(meta); `;
 
 export default function ModalScreen() {
+  const { code } = useLocalSearchParams();
+
+  const [source, setSource] = useState<WebViewProps["source"]>({ uri: "" });
+
+  useEffect(() => {
+    UAEPassConfiguration.getServiceUrlForType(UAEPassServiceType.loginURL).then(
+      (uri) => {
+        console.log("uri", uri);
+        setSource({ uri });
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    Linking.addEventListener("url", (event) => {
+      console.log("url", event);
+      if (event.url.includes("code=")) {
+        const code = event.url.split("code=")[1];
+        console.log("code", code);
+        router.back();
+      }
+    });
+  }, []);
+  useEffect(() => {
+    if (code) {
+      console.log("code:", code);
+      router.back();
+    }
+  }, [code]);
+
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">This is a modal</ThemedText>
-      <Link href="/" dismissTo style={styles.link}>
-        <ThemedText type="link">Go to home screen</ThemedText>
-      </Link>
+      <UAEPassWebView
+        style={styles.webView}
+        source={source}
+        injectedJavaScript={INJECTEDJAVASCRIPT}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        onUAEPassSuccess={(event) => {
+          console.log("onUAEPassSuccess:", event);
+        }}
+        onUAEPassFailure={(event) => {
+          console.log("onUAEPassFailure:", event);
+        }}
+        onSigningCompleted={() => {
+          console.log("onSigningCompleted");
+        }}
+      />
     </ThemedView>
   );
 }
@@ -18,9 +64,9 @@ export default function ModalScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  },
+  webView: {
+    flex: 1,
   },
   link: {
     marginTop: 15,
