@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import type { UAEPassConfig, UAEPassError, UAEPassResult } from "./types";
 import {
-    buildAuthUrl,
-    extractOriginalCallbackFromResume,
-    isFinalRedirect,
-    isOurResumeRoute,
-    isUAEPassAppScheme,
-    parseAuthResult,
-    updateURLBasedScheme,
+  buildAuthUrl,
+  extractOriginalCallbackFromResume,
+  isFinalRedirect,
+  isOurResumeRoute,
+  isUAEPassAppScheme,
+  parseAuthResult,
+  updateURLBasedScheme,
 } from "./utils";
 
 export interface UAEPassAuthWebViewProps {
@@ -19,6 +19,8 @@ export interface UAEPassAuthWebViewProps {
   onClose?: () => void;
   userAgent?: string;
 }
+
+const INJECTEDJAVASCRIPT = `const meta = document.createElement('meta'); meta.setAttribute('content', 'width=device-width, initial-scale=0.5, maximum-scale=0.5, user-scalable=0'); meta.setAttribute('name', 'viewport'); document.getElementsByTagName('head')[0].appendChild(meta); `;
 
 export const UAEPassAuthWebView: React.FC<UAEPassAuthWebViewProps> = ({
   config,
@@ -74,7 +76,9 @@ export const UAEPassAuthWebView: React.FC<UAEPassAuthWebViewProps> = ({
   const openUAEPassApp = async (originalUrl: string) => {
     try {
       // UAE PASS gives: uaepass://...?successURL=<url1>&failureURL=<url2>&...
-      const u = new URL(updateURLBasedScheme(originalUrl, config.env ?? "staging"));
+      const u = new URL(
+        updateURLBasedScheme(originalUrl, config.env ?? "staging")
+      );
       const successURL = u.searchParams.get("successurl");
       const failureURL = u.searchParams.get("failureurl");
       if (!successURL || !failureURL)
@@ -97,7 +101,6 @@ export const UAEPassAuthWebView: React.FC<UAEPassAuthWebViewProps> = ({
 
   const onNav = (nav: WebViewNavigation) => {
     console.log("onNav ", nav);
-    const { url } = nav;
 
     // 1) Intercept uaepass:// handoff, rewrite, and open the UAE PASS app
     if (isUAEPassAppScheme(nav.mainDocumentURL ?? nav.url)) {
@@ -129,19 +132,24 @@ export const UAEPassAuthWebView: React.FC<UAEPassAuthWebViewProps> = ({
       originWhitelist={["*"]}
       source={{ uri }}
       onShouldStartLoadWithRequest={onNav}
-      //   onNavigationStateChange={(navState) => {
-      //     // Android fallback: some RN versions only fire this reliably
-      //     if (Platform.OS === "android") {
-      //       const proceed = onNav(navState as unknown as WebViewNavigation);
-      //       if (!proceed) {
-      //         // cancel by re-pointing to a harmless page
-      //         setTimeout(() => setUri("about:blank"), 0);
-      //       }
-      //     }
-      //   }}
+      onNavigationStateChange={(navState) => {
+        // Android fallback: some RN versions only fire this reliably
+        if (Platform.OS === "android") {
+          const proceed = onNav(navState as unknown as WebViewNavigation);
+          if (!proceed) {
+            // cancel by re-pointing to a harmless page
+            setTimeout(() => setUri("about:blank"), 0);
+          }
+        }
+      }}
       incognito
       javaScriptEnabled
       domStorageEnabled
+      cacheEnabled={false}
+      sharedCookiesEnabled
+      thirdPartyCookiesEnabled
+      injectedJavaScript={INJECTEDJAVASCRIPT}
+      scrollEnabled={false}
       setSupportMultipleWindows={false}
       userAgent={userAgent}
       onError={(e) =>

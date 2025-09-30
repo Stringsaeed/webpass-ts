@@ -1,4 +1,5 @@
 import { UAEPassAuthWebView } from "@/components/V2/V2";
+import { router } from "expo-router";
 import { View } from "react-native";
 
 export default function ModalScreenV2() {
@@ -15,13 +16,16 @@ export default function ModalScreenV2() {
           uiLocales: "en",
           state: Math.random().toString(36).substring(2, 15),
         }}
+
         onSuccess={({ code, state }) => {
           console.log("code", code);
           console.log("state", state);
+          router.dismissAll();
           // Exchange code for tokens on your backend:
           // POST /token -> { grant_type: 'authorization_code', redirect_uri, code }
         }}
         onError={(e) => {
+          router.dismissAll();
           console.warn("UAE PASS error", e);
         }}
       />
