@@ -1,8 +1,10 @@
-import { Button, StyleSheet } from "react-native";
+import { Appearance, Button, StyleSheet } from "react-native";
 
 import { ThemedView } from "@/components/themed-view";
 import { useRouter } from "expo-router";
 import { UAEPass } from "react-native-uaepass";
+
+Appearance.setColorScheme("dark");
 
 const UAEPassConfig = {
   env: "staging", // or production // default staging
@@ -39,6 +41,12 @@ export default function HomeScreen() {
         title="Use uaepass-typescript"
         onPress={() => {
           router.push("/modal");
+        }}
+      />
+      <Button
+        title="Use uaepass-typescript-v2"
+        onPress={() => {
+          router.push("/modal-v2");
         }}
       />
     </ThemedView>
